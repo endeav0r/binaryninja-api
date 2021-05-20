@@ -66,25 +66,18 @@ fn main() {
         install_path.to_str().unwrap(),
     );
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(target_os = "macos")]
     println!(
         "cargo:rustc-link-arg=-Wl,-rpath,{},-L{},-lbinaryninjacore",
         install_path.to_str().unwrap(),
         install_path.to_str().unwrap(),
     );
 
-    // TODO : Clean this up even more
-    #[warn(unused_assignments)]
-    let is_mac = {
-        #[cfg(target_os = "macos")]
-        {
-            true
-        }
-        #[cfg(not(target_os = "macos"))]
-        {
-            false
-        }
-    };
+    #[cfg(target_os = "windows")]
+    {
+        println!("cargo:rustc-link-lib=binaryninjacore");
+        println!("cargo:rustc-link-search={}", install_path.to_str().unwrap());
+    }
 
     let current_line = "#define BN_CURRENT_UI_ABI_VERSION ";
     let minimum_line = "#define BN_MINIMUM_UI_ABI_VERSION ";
@@ -100,8 +93,6 @@ fn main() {
         }
     }
 
-    // Difference between global LLVM/Clang install and custom LLVM/Clang install...
-    //  First option is for the build server, second option is being nice to our dev who have `LLVM_INSTALL_DIR` set, third is for people with "normal" setups (and Macs)
     let mut bindings = bindgen::builder()
         .header("../../binaryninjacore.h")
         .clang_arg("-std=c++17")
@@ -121,13 +112,20 @@ fn main() {
             minimum_version
         ))
         .rustified_enum("BN.*");
-    if let (false, Ok(llvm_dir), Ok(llvm_version)) = (is_mac, llvm_dir, llvm_version) {
-        let llvm_include_path = format!("-I{}/clang/{}/include", llvm_dir, llvm_version);
-        bindings = bindings.clang_arg(llvm_include_path);
-    } else if let (false, Ok(llvm_install_dir)) = (is_mac, llvm_install_dir) {
-        let llvm_include_path = format!("-I{}/12.0.0/lib/clang/12.0.0/include", llvm_install_dir);
-        env::set_var("LIBCLANG_PATH", format!("{}/12.0.0/lib", llvm_install_dir));
-        bindings = bindings.clang_arg(llvm_include_path);
+
+    // Difference between global LLVM/Clang install and custom LLVM/Clang install...
+    //  First option is for the build server, second option is being nice to our dev who have `LLVM_INSTALL_DIR` set, default is for people with "normal" setups (and Macs)
+    #[cfg(not(target_os = "macos"))]
+    {
+        if let (Ok(llvm_dir), Ok(llvm_version)) = (llvm_dir, llvm_version) {
+            let llvm_include_path = format!("-I{}/clang/{}/include", llvm_dir, llvm_version);
+            bindings = bindings.clang_arg(llvm_include_path);
+        } else if let Ok(llvm_install_dir) = llvm_install_dir {
+            let llvm_include_path =
+                format!("-I{}/12.0.0/lib/clang/12.0.0/include", llvm_install_dir);
+            env::set_var("LIBCLANG_PATH", format!("{}/12.0.0/lib", llvm_install_dir));
+            bindings = bindings.clang_arg(llvm_include_path);
+        }
     }
 
     bindings
