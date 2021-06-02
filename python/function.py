@@ -1934,6 +1934,20 @@ class Function(object):
 		core.BNFreeVariableNameAndTypeList(v, count.value)
 		return result
 
+	def get_il_vars(self, il_type):
+		"""Get the variables used in the given IL (read-only)"""
+		count = ctypes.c_ulonglong()
+		v = core.BNGetFunctionILVariables(self.handle, il_type, count)
+
+		result = []
+		for i in range(0, count.value):
+			result.append(Variable(self, v[i].type, v[i].index, v[i].storage))
+
+		result.sort(key = lambda x: x.identifier)
+		core.BNFreeVariableList(v, count.value)
+
+		return result
+
 	@property
 	def indirect_branches(self):
 		"""List of indirect branches (read-only)"""
