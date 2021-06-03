@@ -25,6 +25,7 @@ import traceback
 import ctypes
 import numbers
 import string
+from typing import List
 
 # Binary Ninja components
 import binaryninja
@@ -1934,8 +1935,13 @@ class Function(object):
 		core.BNFreeVariableNameAndTypeList(v, count.value)
 		return result
 
-	def get_il_vars(self, il_type):
-		"""Get the variables used in the given IL (read-only)"""
+	def get_il_vars(self, il_type: FunctionGraphType) -> List[Variable]:
+		"""
+		Get a (read-only) list of the variables used in the given IL. Only
+		accepts ``MediumLevelILFunctionGraph`` or ``HighLevelILFunctionGraph``
+		for ``il_type``, otherwise nothing will be returned.
+		"""
+
 		count = ctypes.c_ulonglong()
 		v = core.BNGetFunctionILVariables(self.handle, il_type, count)
 
