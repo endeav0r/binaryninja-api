@@ -1609,6 +1609,7 @@ extern "C"
 
 		// Script console colors
 		ScriptConsoleOutputColor,
+		ScriptConsoleWarningColor,
 		ScriptConsoleErrorColor,
 		ScriptConsoleEchoColor,
 
