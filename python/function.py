@@ -1949,9 +1949,7 @@ class Function(object):
 		for i in range(0, count.value):
 			result.append(Variable(self, v[i].type, v[i].index, v[i].storage))
 
-		result.sort(key = lambda x: x.identifier)
 		core.BNFreeVariableList(v, count.value)
-
 		return result
 
 	@property
