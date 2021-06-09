@@ -339,12 +339,23 @@ where
     ) where
         C: CallingConventionBase,
     {
-        ffi_wrap!("CallingConvention::incoming_var_for_param", unsafe {
+        ffi_wrap!("CallingConvention::incoming_param_for_var", unsafe {
             let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
             ptr::write(
                 param,
                 BNGetDefaultParameterVariableForIncomingVariable(ctxt.raw_handle, var),
             );
+        })
+    }
+
+    extern "C" fn cb_are_argument_registers_used_for_var_args<C>(
+        ctxt: *mut c_void,
+    ) -> bool where
+        C: CallingConventionBase,
+    {
+        ffi_wrap!("CallingConvention::are_argument_registers_used_for_var_args", unsafe {
+            let ctxt = &*(ctxt as *mut CustomCallingConventionContext<C>);
+            BNAreArgumentRegistersUsedForVarArgs(ctxt.raw_handle)
         })
     }
 
@@ -379,6 +390,8 @@ where
         getIncomingFlagValue: Some(cb_incoming_flag_value::<C>),
         getIncomingVariableForParameterVariable: Some(cb_incoming_var_for_param::<C>),
         getParameterVariableForIncomingVariable: Some(cb_incoming_param_for_var::<C>),
+
+        areArgumentRegistersUsedForVarArgs: Some(cb_are_argument_registers_used_for_var_args::<C>),
     };
 
     unsafe {
