@@ -89,7 +89,8 @@ fn main() {
         }
     }
 
-    let bindings = bindgen::builder()
+    #[allow(unused_mut)]
+    let mut bindings = bindgen::builder()
         .header("../../binaryninjacore.h")
         .clang_arg("-std=c++17")
         .clang_arg("-x")
