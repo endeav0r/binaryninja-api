@@ -23,7 +23,7 @@ use crate::platform::Platform;
 use crate::symbol::Symbol;
 use crate::types::Type;
 
-use crate::llil;
+use crate::{hlil, llil};
 
 use crate::rc::*;
 use crate::string::*;
@@ -215,6 +215,17 @@ impl Function {
             }
 
             Ok(Ref::new(llil::RegularFunction::from_raw(self.arch(), llil)))
+        }
+    }
+
+    pub fn high_level_il(&self) -> Result<crate::hlil::Function, ()> {
+        unsafe {
+            let handle = BNGetFunctionHighLevelIL(self.handle);
+            if handle.is_null() {
+                Err(())
+            } else {
+                Ok(hlil::Function::from_raw(handle))
+            }
         }
     }
 
