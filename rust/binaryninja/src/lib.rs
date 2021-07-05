@@ -36,6 +36,9 @@ extern crate rayon;
 #[macro_use]
 mod ffi;
 
+pub mod error;
+pub use error::Error;
+
 pub mod architecture;
 pub mod backgroundtask;
 pub mod basicblock;
@@ -50,6 +53,7 @@ pub mod filemetadata;
 pub mod flowgraph;
 pub mod function;
 pub mod headless;
+pub mod hlil;
 pub mod llil;
 pub mod platform;
 pub mod rc;
@@ -216,7 +220,7 @@ pub mod logger {
     }
 }
 
-pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::BinaryView>, String> {
+pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::BinaryView>, Error> {
     use crate::binaryview::BinaryViewExt;
     use crate::custombinaryview::BinaryViewTypeExt;
 
@@ -227,20 +231,16 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
     let mut is_bndb = false;
     let view = match match filename.ends_with(".bndb") {
         true => {
-            match File::open(filename) {
-                Ok(mut file) => {
-                    let mut buf = [0; 15];
-                    match file.read_exact(&mut buf) {
-                        Ok(_) => {
-                            let sqlite_string = "SQLite format 3";
-                            if buf != sqlite_string.as_bytes() {
-                                return Err("Not a valid BNDB (invalid magic)".to_string());
-                            }
-                        }
-                        _ => return Err("Not a valid BNDB (too small)".to_string()),
+            let mut file = File::open(filename)?;
+            let mut buf = [0; 15];
+            match file.read_exact(&mut buf) {
+                Ok(_) => {
+                    let sqlite_string = "SQLite format 3";
+                    if buf != sqlite_string.as_bytes() {
+                        return Err(error::OpenError::MagicBytes.into());
                     }
                 }
-                _ => return Err("Could not open file".to_string()),
+                _ => return Err(error::OpenError::TooSmall.into()),
             }
             is_bndb = true;
             metadata.open_database(filename.to_str().unwrap())
@@ -248,7 +248,7 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
         false => binaryview::BinaryView::from_filename(&mut metadata, filename.to_str().unwrap()),
     } {
         Ok(view) => view,
-        _ => return Err("Unable to open file".to_string()),
+        _ => return Err(error::OpenError::NoBndbExtension.into()),
     };
 
     let mut bv = None;
@@ -275,7 +275,7 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
             if is_bndb {
                 match view.metadata().get_view_of_type("Raw") {
                     Ok(view) => view,
-                    _ => return Err("Could not get raw view from bndb".to_string()),
+                    _ => return Err("Could not get raw view from bndb".into()),
                 }
             } else {
                 match custombinaryview::BinaryViewType::by_name("Raw")
@@ -283,7 +283,7 @@ pub fn open_view<F: AsRef<Path>>(filename: F) -> Result<rc::Ref<binaryview::Bina
                     .open(&view)
                 {
                     Ok(view) => view,
-                    _ => return Err("Could not open raw view".to_string()),
+                    _ => return Err("Could not open raw view".into()),
                 }
             }
         }

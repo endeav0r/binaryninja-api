@@ -18,7 +18,6 @@ pub use binaryninjacore_sys::BNModificationStatus as ModificationStatus;
 
 use std::ops;
 use std::ptr;
-use std::result;
 
 use crate::architecture::Architecture;
 use crate::architecture::CoreArchitecture;
@@ -38,10 +37,6 @@ use crate::Endianness;
 
 use crate::rc::*;
 use crate::string::*;
-
-// TODO : general reorg of modules related to bv
-
-pub type Result<R> = result::Result<R, ()>;
 
 pub trait BinaryViewBase: AsRef<BinaryView> {
     fn read(&self, _buf: &mut [u8], _offset: u64) -> usize {
@@ -132,7 +127,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn parent_view(&self) -> Result<Ref<BinaryView>> {
+    fn parent_view(&self) -> Result<Ref<BinaryView>, ()> {
         let handle = unsafe { BNGetParentView(self.as_ref().handle) };
 
         if handle.is_null() {
@@ -269,7 +264,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn symbol_by_address(&self, addr: u64) -> Result<Ref<Symbol>> {
+    fn symbol_by_address(&self, addr: u64) -> Result<Ref<Symbol>, ()> {
         unsafe {
             let raw_sym = BNGetSymbolByAddress(self.as_ref().handle, addr, ptr::null_mut());
 
@@ -281,7 +276,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn symbol_by_raw_name<S: BnStrCompatible>(&self, raw_name: S) -> Result<Ref<Symbol>> {
+    fn symbol_by_raw_name<S: BnStrCompatible>(&self, raw_name: S) -> Result<Ref<Symbol>, ()> {
         let raw_name = raw_name.as_bytes_with_nul();
 
         unsafe {
@@ -378,7 +373,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         sym: &Symbol,
         plat: &Platform,
         ty: T,
-    ) -> Result<Ref<Symbol>> {
+    ) -> Result<Ref<Symbol>, ()> {
         let raw_type = if let Some(t) = ty.into() {
             t.handle
         } else {
@@ -472,7 +467,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn section_by_name<S: BnStrCompatible>(&self, name: S) -> Result<Section> {
+    fn section_by_name<S: BnStrCompatible>(&self, name: S) -> Result<Section, ()> {
         unsafe {
             let raw_name = name.as_bytes_with_nul();
             let name_ptr = raw_name.as_ref().as_ptr() as *mut _;
@@ -526,7 +521,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         unsafe { BNHasFunctions(self.as_ref().handle) }
     }
 
-    fn entry_point_function(&self) -> Result<Ref<Function>> {
+    fn entry_point_function(&self) -> Result<Ref<Function>, ()> {
         unsafe {
             let func = BNGetAnalysisEntryPoint(self.as_ref().handle);
 
@@ -558,7 +553,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn function_at(&self, platform: &Platform, addr: u64) -> Result<Ref<Function>> {
+    fn function_at(&self, platform: &Platform, addr: u64) -> Result<Ref<Function>, ()> {
         unsafe {
             let handle = BNGetAnalysisFunction(self.as_ref().handle, platform.handle, addr);
 
@@ -598,7 +593,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn read_buffer(&self, offset: u64, len: usize) -> Result<DataBuffer> {
+    fn read_buffer(&self, offset: u64, len: usize) -> Result<DataBuffer, ()> {
         let read_buffer = unsafe { BNReadViewBuffer(self.as_ref().handle, offset, len) };
         if read_buffer.is_null() {
             Err(())
@@ -618,7 +613,7 @@ pub trait BinaryViewExt: BinaryViewBase {
         }
     }
 
-    fn load_settings<S: BnStrCompatible>(&self, view_type_name: S) -> Result<Ref<Settings>> {
+    fn load_settings<S: BnStrCompatible>(&self, view_type_name: S) -> Result<Ref<Settings>, ()> {
         let view_type_name = view_type_name.as_bytes_with_nul();
         let settings_handle = unsafe {
             BNBinaryViewGetLoadSettings(
@@ -664,7 +659,7 @@ impl BinaryView {
     pub fn from_filename<S: BnStrCompatible>(
         meta: &mut FileMetadata,
         filename: S,
-    ) -> Result<Ref<Self>> {
+    ) -> Result<Ref<Self>, ()> {
         let file = filename.as_bytes_with_nul();
 
         let handle = unsafe {
@@ -678,7 +673,7 @@ impl BinaryView {
         unsafe { Ok(Ref::new(Self { handle })) }
     }
 
-    pub fn from_accessor(meta: &FileMetadata, file: &mut FileAccessor) -> Result<Ref<Self>> {
+    pub fn from_accessor(meta: &FileMetadata, file: &mut FileAccessor) -> Result<Ref<Self>, ()> {
         let handle =
             unsafe { BNCreateBinaryDataViewFromFile(meta.handle, &mut file.api_object as *mut _) };
 
@@ -689,7 +684,7 @@ impl BinaryView {
         unsafe { Ok(Ref::new(Self { handle })) }
     }
 
-    pub fn from_data(meta: &FileMetadata, data: &[u8]) -> Result<Ref<Self>> {
+    pub fn from_data(meta: &FileMetadata, data: &[u8]) -> Result<Ref<Self>, ()> {
         let handle = unsafe {
             BNCreateBinaryDataViewFromData(meta.handle, data.as_ptr() as *mut _, data.len())
         };
