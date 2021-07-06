@@ -86,10 +86,12 @@ pub fn shutdown() {
 pub fn script_helper(func: fn()) {
     //! Prelued-postlued helper function:
     //! ```
+    //! # use binaryninja::binaryview::BinaryViewExt;
     //! fn main() {
     //!     binaryninja::headless::script_helper(|| {
     //!         binaryninja::open_view("/bin/cat")
     //!             .expect("Couldn't open `/bin/cat`")
+    //!             .functions()
     //!             .iter()
     //!             .for_each(|func| println!("  `{}`", func.symbol().full_name()));
     //!     });

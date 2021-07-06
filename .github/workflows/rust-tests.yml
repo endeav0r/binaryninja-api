@@ -1,0 +1,25 @@
+on: [push, pull_request]
+name: All Checks
+jobs:
+  basic_rust_tests:
+    runs-on: ubuntu-latest
+    # All rust actions take place in the rust folder.
+    defaults:
+      run:
+        working-directory: ./rust
+    steps:
+      - uses: actions/checkout@v2
+      - name: install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang
+      - uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            override: true
+      - run: rustup component add rustfmt
+      # Unless we put a compatible workspace Cargo.toml in the root directory
+      # of the repository, github rust actions aren't going to work. That's
+      # fine, we can just run them manually.
+      - name: cargo check
+        run: cargo check
